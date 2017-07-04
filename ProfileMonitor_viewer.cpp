@@ -26,12 +26,12 @@ using namespace GenApi;
 // definition of const number
 string file_path = "/mnt/sakelab/profile-monitor/offline/profile-image/";
 static const uint32_t c_countOfImagesToGrab = 100;
-const double xrange = 85.1; //画像のx両端間の距離（mm）
-const double yrange = 64.1;//画像のy両端間の距離（mm）
+const double xrange = 83.3; //画像のx両端間の距離（mm）
+const double yrange = 62.5;//画像のy両端間の距離（mm）
 const double xwindow = 42; //x方向の切り取る範囲
 const double ywindow = 42; //y方向の切り取る範囲
-const double xcenter = 4.51; //画像のx中心位置(mm)
-const double ycenter = 4.66; //画像のy中心位置(mm)
+const double xcenter = 1.26; //画像のx中心位置(mm)
+const double ycenter = 5.30; //画像のy中心位置(mm)
 const int xPixels = 2592; //resolution of a camera(x)
 const int yPixels = 1944;//resolution of a camera(y)
 const double xwindow_target = 28.4; //width of the ROI(x)
