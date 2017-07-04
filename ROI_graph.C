@@ -170,7 +170,7 @@ double array_x[30000];
 double array_y[30000];
 int rb_fr = 0;
 double buf[500];
-
+int interval = 500;
 
 
 TGMainFrame *fMainFrame874 = new TGMainFrame(gClient->GetRoot(), 10, 10, kMainFrame | kVerticalFrame);
@@ -226,7 +226,7 @@ int ROI_graph(int rb_fr_arg) {
 
 //プロット
 
-	TTimer *timer = new TTimer(1000);
+	TTimer *timer = new TTimer(interval);
 	timer->SetCommand("Update(rb_fr)");
 	timer->TurnOn();
 

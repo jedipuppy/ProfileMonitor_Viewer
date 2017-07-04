@@ -40,10 +40,10 @@ const int projection_hight = 150; //height of the projection windows
 const int ywindows_margin = 280;
 const double resize_factor = 0.5; //resize factor of the image
 const double threshold_value = 25.5;
-const int ROIlist_rate = 1; //time interval to take ROI
-const int ROIlist_length = 1000;  //max rows of ROI list
+const int ROIlist_rate = 0.5; //time interval to take ROI
+const int ROIlist_length = 10;  //max rows of ROI list
 const int max_gain = 23; // max gain of camera
-const int max_exposure = 6;// max exposure time (10^x)
+const int max_exposure = 100;// max exposure time (10^x)
 const int Rb_ROI_to_numbers = 2.85e3;
 const int Fr_ROI_to_numbers = 0.006;
 const int factor_vol = 2.8;
@@ -71,7 +71,7 @@ int key;      //waitkey
 
 int slider_flag = 0;
 int gain_slider = 0;
-int exposure_slider = 5;
+int exposure_slider = 1;
 int RbFr_slider = 0;
 double max_vertical;
 double max_horizontal;
@@ -83,7 +83,7 @@ vector< vector<float> > ROIlist( 2, vector<float>(0) );
 
 char  vol_306[1024];
 float ROI_to_numbers ;
-
+string ion="Rb";
 
 //declartion of local time
 time_t t;
@@ -100,6 +100,7 @@ template < typename T > std::string to_string( const T& n )
 struct MouseParams
 {
   Mat mouseparams_img;
+  Mat mouseparams_cmimg;
   Point mouseparams_pt;
   vector< vector<float> > ROIlist;
 };
@@ -110,8 +111,8 @@ struct MouseParams
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void MouseCall( int event, int x, int y, int flags, void* param) {
   MouseParams* mp = (MouseParams*)param;
-  cv::Mat resized_img =  mp->mouseparams_img;
-
+  cv::Mat img =  mp->mouseparams_img;
+  cv::Mat cm_img =  mp->mouseparams_cmimg;
 //file save on Lbuttondown
   if (event == cv::EVENT_LBUTTONDOWN) {
     vector< vector<float> > ROIlist =  mp->ROIlist;
@@ -131,8 +132,8 @@ void MouseCall( int event, int x, int y, int flags, void* param) {
 
     //save image file
     strftime(filename, sizeof(filename), "PM%y%m%d%H%M%S", localtime(&t));
-    imwrite(file_path + to_string(foldername) + "/" + to_string(filename) + ".bmp", resized_img);
-    imwrite(file_path + to_string(foldername) + "/" + to_string(filename) + ".png", resized_img);
+    imwrite(file_path + to_string(foldername) + "/" + to_string(filename) + ".bmp", img);
+    imwrite(file_path + to_string(foldername) + "/" + to_string(filename) + ".png", cm_img);
     cout << "Image file is saved as " << file_path  + to_string(foldername) + "/" + to_string(filename) + ".bmp" << "\n";
 
 
@@ -143,10 +144,12 @@ void MouseCall( int event, int x, int y, int flags, void* param) {
       while (fgets(voltage_list, sizeof(voltage_list), fp) != NULL) {//read voltage list
       }
     }
+
     pclose(fp);
-    strcat( datafile, "MCP front :\t " );    strcat( datafile, vol_306 );
+    strcat( datafile, "ion mode :\t " );    strcat( datafile, ion.c_str() );
+    strcat( datafile, "\n MCP front :\t " );    strcat( datafile, vol_306 );
     strcat( datafile, "gain :\t " );    strcat( datafile, to_string(gain_slider).c_str() );
-    strcat( datafile, "\n exposure time :\t " );   strcat( datafile, to_string(pow(10, exposure_slider)).c_str() );
+    strcat( datafile, "\n exposure time :\t " );   strcat( datafile, to_string(exposure_slider*100000).c_str() );
     strcat( datafile, " us \nvoltage list: \t " );
     strcat( datafile, voltage_list );
     ofstream datafilename((file_path + to_string(foldername) + "/" + to_string(filename) + ".txt").c_str());
@@ -165,7 +168,7 @@ void MouseCall( int event, int x, int y, int flags, void* param) {
 
 
     //submit elog
-    string elog_command = "cat " + file_path + to_string(foldername) + "/" + to_string(filename) + to_string(".txt | elog -h localhost -p 8080 -l offline -a Author=\"tanaka\" -a Fr=\"off\" -a Rb=\"off\" -a Type=\"beam tuning\" -a Subject=\"test\" -f ") + file_path  + to_string(foldername) + "/" + to_string(filename) + ".png -f " + "ROI.txt" ;
+    string elog_command = "cat " + file_path + to_string(foldername) + "/" + to_string(filename) + to_string(".txt | elog -h localhost -p 8080 -l offline -a Author=\"tanaka\" -a ion=\"")+ion+to_string("\" -f ") + file_path  + to_string(foldername) + "/" + to_string(filename) + ".png -f " + "ROI.txt" ;
     system(elog_command.c_str());
 
     cout << "data file is saved.";
@@ -242,9 +245,9 @@ int main(int argc, char* argv[])
     namedWindow("Projection_Vertical", WINDOW_AUTOSIZE); moveWindow("Projection_Vertical", xwidthPixels * resize_factor, 0);
 
     //preparetion for trackbar
-    cvCreateTrackbar ("GainTrackbar", "CM_Image", &gain_slider, max_gain, on_tracker);
-    cvCreateTrackbar ("exposureTrackbar", "CM_Image", &exposure_slider, max_exposure, on_tracker);
-    cvCreateTrackbar ("RbFr", "CM_Image", &RbFr_slider, 1, on_tracker);
+    cvCreateTrackbar ("Gain", "CM_Image", &gain_slider, max_gain, on_tracker);
+    cvCreateTrackbar ("exposure(*100000 us)", "CM_Image", &exposure_slider, max_exposure, on_tracker);
+    cvCreateTrackbar ("0=Rb, 1=Fr", "CM_Image", &RbFr_slider, 1, on_tracker);
     Rect ROI(xlowPixels, ylowPixels, xwidthPixels, ywidthPixels);
     Rect target_ROI(xlowPixels_target, ylowPixels_target, xwidthPixels_target, ywidthPixels_target);
 
@@ -261,15 +264,13 @@ int main(int argc, char* argv[])
 
 
     MouseParams mp;
-    mp.mouseparams_img = img;
-    mp.ROIlist  = ROIlist;
     setMouseCallback("CM_Image", &MouseCall, (void *)&mp);
     projection_horizontal = cv::Scalar(255);
     projection_vertical = cv::Scalar(255);
 
 //generate ROI graph
     system ("rm ROI.txt");
-    system (("gnome-terminal --geometry=80x20+1000+200 -x  root -l  .x 'ROI_graph.C(" + to_string(RbFr_slider) + to_string(") ; exit'")).c_str());
+    system (("gnome-terminal --geometry=80x20+1000+200 -x  root -l  .x 'ROI_graph.C(" + to_string(RbFr_slider) + to_string(") '")).c_str());
     ofstream ROIlistfilename("ROI.txt");
     ROIlistfilename << 0;
     ROIlistfilename << "\t";
@@ -288,27 +289,31 @@ int main(int argc, char* argv[])
       }
     }
     if (RbFr_slider == 0) {
-      ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (pow(10, exposure_slider) / 100000);
+      ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /  (exposure_slider*100000);
     }
     else {
-      ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (pow(10, exposure_slider) / 100000);
+      ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /(exposure_slider*100000);
     }
 
     pclose(fp);
 
     while (camera.IsGrabbing()) {
       camera.RetrieveResult( 5000, ptrGrabResult, TimeoutHandling_ThrowException);
+
       if (ptrGrabResult->GrabSucceeded()) {
+
         if (slider_flag = 1) {
           if (RbFr_slider == 0) {
-            ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (pow(10, exposure_slider) / 100000);
+            ion = "Rb";
+            ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (exposure_slider*100000);
           }
           else {
-            ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (pow(10, exposure_slider) / 100000);
+            ion ="Fr";
+            ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /(exposure_slider*100000);
           }
 
           gain->SetValue(gain_slider);
-          exposuretime->SetValue(pow(10, exposure_slider));
+          exposuretime->SetValue(exposure_slider*100000);
           slider_flag = 0;
         }
         //image conversion
@@ -325,8 +330,8 @@ int main(int argc, char* argv[])
         //display text
         putText(cm_img, "MCP front: " + to_string(vol_306) + to_string(" V"), cv::Point(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
         putText(cm_img, "Gain: " + to_string(gain_slider), cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
-        putText(cm_img, "exposure time: " + to_string(pow(10, exposure_slider)) + to_string(" us"), cv::Point(20, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
-        putText(cm_img, "number of ions: " + to_string(targetROI_sum), cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
+        putText(cm_img, "exposure time: " + to_string(exposure_slider*100000) + to_string(" us"), cv::Point(20, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
+        putText(cm_img, "number of "+ion+ to_string(" ions: ") + to_string(targetROI_sum), cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
 
 
         //show target Rect
@@ -335,6 +340,10 @@ int main(int argc, char* argv[])
         //show color map
         imshow("CM_Image", cm_img);
 
+        //load mouseparams
+    mp.mouseparams_img = img;
+    mp.mouseparams_cmimg = cm_img;
+    mp.ROIlist  = ROIlist;
         //generate projection image
         projection_horizontal = cv::Scalar(255);
         projection_vertical = cv::Scalar(255);
