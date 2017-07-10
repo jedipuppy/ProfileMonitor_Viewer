@@ -168,34 +168,46 @@ char *ptr;
 int i = 0;
 double array_x[30000];
 double array_y[30000];
-int rb_fr = 0;
+int rb_fr = 1;
 double buf[500];
-int interval = 500;
-
+int interval = 1000;
+int start = 0;
 
 TGMainFrame *fMainFrame874 = new TGMainFrame(gClient->GetRoot(), 10, 10, kMainFrame | kVerticalFrame);
 TRootEmbeddedCanvas *cem1 = new TRootEmbeddedCanvas(0, fMainFrame874, 472, 320);
 Int_t wcem1 = cem1->GetCanvasWindowId();
 TCanvas *c123 = new TCanvas("c123", 10, 10, wcem1);
-TF1 f1("f1", "[1]*(1-exp(0.693*(x-[2])/180))+[3]");
+	TGNumberEntry *t1 = new TGNumberEntry(fMainFrame874, (Double_t) 0, 8, -1, (TGNumberFormat::EStyle) 5);
+TF1 f1("f1", "[1]*(1-exp(0.693*(-(x-[2]))/190))+[3]");
+
+
 f1.SetParameter(0, 1000);
 f1.SetParameter(1, 1);
 f1.SetParameter(2, 1000);
-int ROI_graph(int rb_fr_arg) {
+int ROI_graph(int rb_fr_arg, int interval_arg) {
 	rb_fr = rb_fr_arg;
+	interval = interval_arg*1000;
 	// main frame
 
 	fMainFrame874->SetName("fMainFrame874");
 	fMainFrame874->SetLayoutBroken(kTRUE);
-	TGNumberEntry *t1 = new TGNumberEntry(fMainFrame874, (Double_t) 0, 8, -1, (TGNumberFormat::EStyle) 5);
+
 	t1->SetName("t1");
 	fMainFrame874->AddFrame(t1, new TGLayoutHints(kLHintsLeft | kLHintsTop, 2, 2, 2, 2));
-	t1->MoveResize(0, 536, 188, 24);
+	t1->MoveResize(0, 536, 100, 24);
 
+
+	//ok button
+   TGTextButton *submit = new TGTextButton(fMainFrame874,"OK",-1,TGTextButton::GetDefaultGC()(),TGTextButton::GetDefaultFontStruct(),kRaisedFrame);
+   submit->SetTextJustify(36);
+   submit->SetMargins(0,0,0,0);
+   submit->SetWrapLength(-1);
+   submit->Resize(59,24);
+   fMainFrame874->AddFrame(submit, new TGLayoutHints(kLHintsLeft | kLHintsTop,2,2,2,2));
+   submit->MoveResize(424,536,59,24);
+	submit->Connect("Clicked()","MyMainFrame",0,"t1Update()");
 	// embedded canvas
 	cem1->SetName("cem1");
-
-
 	cem1->AdoptCanvas(c123);
 	fMainFrame874->AddFrame(cem1, new TGLayoutHints(kLHintsLeft | kLHintsTop, 2, 2, 2, 2));
 	cem1->MoveResize(8, 8, 672, 520);
@@ -245,12 +257,11 @@ void Update(int rb_fr) {
 	TGraph* tg = new TGraph(1, array_x, array_y);
 	tg->Draw("AL");
 
-
 	int array_size_temp = 0;
 	FILE *fp = fopen("ROI.txt", "r");
 	//data fileから値を読み込んでtreeへfill
 			if (fp == NULL) {
-		        exit(1);	
+	//	        exit(1);	
 		        	}
 	while (fgets(&line, 500, fp)) {
 
@@ -281,7 +292,14 @@ label1:
 	TGraph* tg = new TGraph(array_size_temp, array_x, array_y);
 	tg->Draw("AL");
 	if (rb_fr == 1) {
-		tg->Fit("f1", "", "", 0, array_x[array_size_temp]);
+		tg->Fit("f1", "", "", start, array_x[array_size_temp-1]);
+
 	}
+
+  cout <<"start:" <<start <<"\t end " <<array_x[array_size_temp-1] <<"\n";
 	c123->Update();
+}
+void t1Update(){
+	start=t1->GetNumber();
+	cout << "change \n";
 }

@@ -41,12 +41,12 @@ const int ywindows_margin = 280;
 const double resize_factor = 0.5; //resize factor of the image
 const double threshold_value = 25.5;
 const int ROIlist_rate = 0.5; //time interval to take ROI
-const int ROIlist_length = 10;  //max rows of ROI list
+const int ROIlist_length = 1000;  //max rows of ROI list
 const int max_gain = 23; // max gain of camera
 const int max_exposure = 100;// max exposure time (10^x)
-const int Rb_ROI_to_numbers = 2.85e3;
+const double Rb_ROI_to_numbers = 2.94e3;
 const int Fr_ROI_to_numbers = 0.006;
-const int factor_vol = 2.8;
+const double factor_vol = 2.8;
 const string mpod_ip = "192.168.253.73";
 //definition of position on image
 int xlowPixels = (int)(xPixels / 2 * (1 - xwindow / xrange + 2 * xcenter / xrange));
@@ -72,7 +72,7 @@ int key;      //waitkey
 int slider_flag = 0;
 int gain_slider = 0;
 int exposure_slider = 1;
-int RbFr_slider = 0;
+int RbFr_slider = 1;
 double max_vertical;
 double max_horizontal;
 char filename[128];
@@ -83,7 +83,7 @@ vector< vector<float> > ROIlist( 2, vector<float>(0) );
 
 char  vol_306[1024];
 float ROI_to_numbers ;
-string ion="Rb";
+string ion="Fr";
 
 //declartion of local time
 time_t t;
@@ -200,7 +200,9 @@ void MouseCall( int event, int x, int y, int flags, void* param) {
 void
 on_tracker (int val)
 {
+
   slider_flag = 1;
+
 }
 
 
@@ -270,7 +272,7 @@ int main(int argc, char* argv[])
 
 //generate ROI graph
     system ("rm ROI.txt");
-    system (("gnome-terminal --geometry=80x20+1000+200 -x  root -l  .x 'ROI_graph.C(" + to_string(RbFr_slider) + to_string(") '")).c_str());
+    system (("gnome-terminal --geometry=80x20+1000+200 -x  root -l  .x 'ROI_graph.C(" + to_string(RbFr_slider) +to_string(",")+to_string(ROIlist_rate)+ to_string(") '")).c_str());
     ofstream ROIlistfilename("ROI.txt");
     ROIlistfilename << 0;
     ROIlistfilename << "\t";
@@ -289,10 +291,10 @@ int main(int argc, char* argv[])
       }
     }
     if (RbFr_slider == 0) {
-      ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /  (exposure_slider*100000);
+      ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / exposure_slider;
     }
     else {
-      ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /(exposure_slider*100000);
+      ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /exposure_slider;
     }
 
     pclose(fp);
@@ -302,14 +304,19 @@ int main(int argc, char* argv[])
 
       if (ptrGrabResult->GrabSucceeded()) {
 
-        if (slider_flag = 1) {
+        if (slider_flag == 1) {
+              if ((fp = popen(("snmpget -v 2c -M /home/cyric/mibs -m +WIENER-CRATE-MIB -c public "+mpod_ip+to_string(" outputMeasurementSenseVoltage.306 |grep \"[0-9]*\\.[0-9]\" -o")).c_str(), "r")) != NULL) {
+
+      while (fgets(vol_306, sizeof(vol_306), fp) != NULL) {
+      }
+    }
           if (RbFr_slider == 0) {
             ion = "Rb";
-            ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / (exposure_slider*100000);
+            ROI_to_numbers = Rb_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) / exposure_slider;
           }
           else {
             ion ="Fr";
-            ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /(exposure_slider*100000);
+            ROI_to_numbers = Fr_ROI_to_numbers / pow(factor_vol, (atoi(vol_306) - 1000) / 50) /exposure_slider;
           }
 
           gain->SetValue(gain_slider);
@@ -331,7 +338,7 @@ int main(int argc, char* argv[])
         putText(cm_img, "MCP front: " + to_string(vol_306) + to_string(" V"), cv::Point(20, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
         putText(cm_img, "Gain: " + to_string(gain_slider), cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
         putText(cm_img, "exposure time: " + to_string(exposure_slider*100000) + to_string(" us"), cv::Point(20, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
-        putText(cm_img, "number of "+ion+ to_string(" ions: ") + to_string(targetROI_sum), cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
+        putText(cm_img, "number of "+ion+ to_string(" ions: ") + to_string(targetROI_sum)+to_string("\t gross: ") +to_string(sum(img_target_threshold).val[0] ), cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 2, CV_AA);
 
 
         //show target Rect
