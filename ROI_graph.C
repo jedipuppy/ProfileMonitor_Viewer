@@ -187,6 +187,7 @@ f1.SetParameter(2, 1000);
 int ROI_graph(int rb_fr_arg, int interval_arg) {
 	rb_fr = rb_fr_arg;
 	interval = interval_arg*1000;
+	      system ("rm ROI.txt");
 	// main frame
 
 	fMainFrame874->SetName("fMainFrame874");
@@ -261,7 +262,7 @@ void Update(int rb_fr) {
 	FILE *fp = fopen("ROI.txt", "r");
 	//data fileから値を読み込んでtreeへfill
 			if (fp == NULL) {
-	//	        exit(1);	
+		        return;	
 		        	}
 	while (fgets(&line, 500, fp)) {
 
@@ -290,6 +291,7 @@ label1:
 	}
 	//TGraphのインスタンス作成
 	TGraph* tg = new TGraph(array_size_temp, array_x, array_y);
+	tg->GetXaxis()->SetLimits(array_x[0],array_x[array_size_temp-1]);
 	tg->Draw("AL");
 	if (rb_fr == 1) {
 		tg->Fit("f1", "", "", start, array_x[array_size_temp-1]);

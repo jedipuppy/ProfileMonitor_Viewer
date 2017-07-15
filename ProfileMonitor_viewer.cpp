@@ -40,14 +40,14 @@ const int projection_hight = 150; //height of the projection windows
 const int ywindows_margin = 280;
 const double resize_factor = 0.5; //resize factor of the image
 const double threshold_value = 25.5;
-const int ROIlist_rate = 0.5; //time interval to take ROI
-const int ROIlist_length = 1000;  //max rows of ROI list
+const int ROIlist_rate = 1; //time interval to take ROI
 const int max_gain = 23; // max gain of camera
 const int max_exposure = 100;// max exposure time (10^x)
 const double Rb_ROI_to_numbers = 2.94e3;
 const int Fr_ROI_to_numbers = 0.006;
 const double factor_vol = 2.8;
 const string mpod_ip = "192.168.253.73";
+const int ROIlist_maxlength = 10;  //max rows of ROI list
 //definition of position on image
 int xlowPixels = (int)(xPixels / 2 * (1 - xwindow / xrange + 2 * xcenter / xrange));
 int xupPixels = (int)(xPixels / 2 * (1 + xwindow / xrange + 2 * xcenter / xrange));
@@ -69,6 +69,8 @@ int xwidthPixels_target = (int)(xPixels*xwindow_target / xrange);
 int ywidthPixels_target = (int)(yPixels*ywindow_target / yrange);
 int key;      //waitkey
 
+int ROIlist_length = 0;
+int ROIlist_start = 0;
 int slider_flag = 0;
 int gain_slider = 0;
 int exposure_slider = 1;
@@ -375,7 +377,7 @@ int main(int argc, char* argv[])
         imshow("Projection_Horizontal", projection_horizontal);
         imshow("Projection_Vertical", projection_vertical);
 
-        //generate target ROI list
+  //generate target ROI list
         time(&time_end2);
         if (time_end2 >= time_end1 + ROIlist_rate) {
           time_end1 = time_end2;
@@ -394,7 +396,7 @@ int main(int argc, char* argv[])
           ROIlistfilename.close();
 
 
-        }
+}
         mp.ROIlist  = ROIlist;
         int ROIlist_max = *std::max_element(ROIlist[1].begin(), ROIlist[1].end());
 
